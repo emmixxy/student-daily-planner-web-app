@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Final Timetable</title>
+    {% load static %}
+    <link rel="stylesheet" href="/static/planner/style.css">
+    <style>body{margin:0;min-height:100vh;background:#e8eef3;font-family:Arial,sans-serif}.page-container{background:rgba(255,255,255,0.86);max-width:900px;margin:40px auto;padding:24px 28px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.2);text-align:center}.brand{display:flex;align-items:center}.brand img{height:40px;border-radius:8px;margin-right:10px}.brand-title{font-weight:bold;font-size:18px}h2{margin-top:0}button{padding:10px 16px;border-radius:8px;border:none;background:#0d6efd;color:white;cursor:pointer}button:hover{background:#0b5ed7}</style>
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+        }
+        .grey {
+            background-color: lightgrey;
+        }
+        .editable {
+            background-color: white;
+        }
+    </style>
+</head>
+{% load planner_extras %}
+<body>
+    <div class="page-container">
+    <div class="brand-row">
+        <div class="brand">
+            <img src="/static/planner/plannerly.svg" alt="Plannerly logo">
+            <span class="brand-title">Daily Planner</span>
+        </div>
+        <div class="no-print" style="text-align:right;">
+            <a href="{% url 'activities' %}">Previous</a>
+            | <a href="{% url 'welcome' %}">Home</a>
+            | <a href="{% url 'logout' %}" onclick="saveProgress()">Logout</a>
+        </div>
+    </div>
+    <h2>Final Timetable</h2>
+    <div class="no-print" style="margin-bottom: 12px;">
+        <button id="fillBtn" onclick="fillActivities()">Fill Activities</button>
+        <button id="clearBtn" onclick="clearActivities()">Clear</button>
+        <button id="editBtn" onclick="toggleGreyEdit()">Enable Grey Edit</button>
+        <button id="lockBtn" onclick="toggleLock()">Lock</button>
+        <button id="pdfBtn" onclick="saveAsPDF()">Save as PDF</button>
+        <button id="icsBtn" onclick="promptICSWeeks()">Sync to Google (ICS)</button>
+    </div>
+    <table>
+        <tr>
+            <th>Time</th>
+            <th>Monday</th>
+            <th>Tuesday</th>
+            <th>Wednesday</th>
+            <th>Thursday</th>
+            <th>Friday</th>
+            <th>Saturday</th>
+            <th>Sunday</th>
+        </tr>
+        {% for hour in 8|to:21 %}
+            <tr>
+                <td>{{ hour }}:00</td>
+                {% for day in days %}
+                    {% cell_class preferences hour day as klass %}
+                    <td class="{{ klass }}" {% if klass == 'editable' %}contenteditable="true"{% endif %}></td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+    </table>
+    <script>
+        let isLocked = false;
+        let greyEditEnabled = false;
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function fillActivities() {
+            if (isLocked) return;
+            const activitiesBase = {{ activities_json }};
+            const activities = [];
+            activitiesBase.forEach(name => {
+                activities.push(name);
+                activities.push(name);
+            });
+
+            const editableCells = Array.from(document.querySelectorAll('.editable'));
+            editableCells.forEach(cell => { cell.innerText = ''; });
+            shuffle(activities);
+            shuffle(editableCells);
+
+            const fillCount = Math.min(activities.length, editableCells.length);
+            for (let i = 0; i < fillCount; i++) {
+                editableCells[i].innerText = activities[i];
+            }
+            if (editableCells.length < activities.length) {
+                console.warn('Not enough editable cells to place each activity twice.');
+            }
+            applyEditability();
+        }
+
+        function clearActivities() {
+            if (isLocked) return;
+            const editableCells = document.querySelectorAll('.editable');
+            editableCells.forEach(cell => { cell.innerText = ''; });
+        }
+
+        function toggleGreyEdit() {
+            if (isLocked) return;
+            greyEditEnabled = !greyEditEnabled;
+            document.getElementById('editBtn').innerText = greyEditEnabled ? 'Disable Grey Edit' : 'Enable Grey Edit';
+            applyEditability();
+        }
+
+        function toggleLock() {
+            isLocked = !isLocked;
+            document.getElementById('lockBtn').innerText = isLocked ? 'Unlock' : 'Lock';
+            document.getElementById('fillBtn').disabled = isLocked;
+            document.getElementById('clearBtn').disabled = isLocked;
+            document.getElementById('editBtn').disabled = isLocked;
+            applyEditability();
+        }
+
+        function applyEditability() {
+            const greyCells = document.querySelectorAll('.grey');
+            const editableCells = document.querySelectorAll('.editable');
+            greyCells.forEach(cell => {
+                const allow = !isLocked && greyEditEnabled;
+                cell.setAttribute('contenteditable', allow ? 'true' : 'false');
+            });
+            editableCells.forEach(cell => {
+                const allow = !isLocked;
+                cell.setAttribute('contenteditable', allow ? 'true' : 'false');
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', applyEditability);
+
+        function saveAsPDF() {
+            window.print();
+        }
+
+        function saveProgress() {
+            const data = {};
+            const days = {{ days_json|safe }};
+            const rows = document.querySelectorAll('table tr');
+            for (let r = 1; r < rows.length; r++) {
+                const cells = rows[r].children;
+                const hourText = cells[0].innerText.split(':')[0];
+                const hour = parseInt(hourText, 10);
+                for (let c = 1; c < cells.length; c++) {
+                    const day = days[c-1];
+                    const key = day + '_' + hour;
+                    data[key] = cells[c].innerText || '';
+                }
+            }
+            fetch('{% url "save_progress" %}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify(data)
+            });
+        }
+
+        function promptICSWeeks() {
+            const input = prompt('How many weeks should the ICS export cover? (1-52)', '12');
+            if (!input) return;
+            const weeks = parseInt(input, 10);
+            if (isNaN(weeks) || weeks < 1 || weeks > 52) {
+                alert('Please enter a number between 1 and 52');
+                return;
+            }
+            saveProgress();
+            window.location.href = '{% url 'export_ics' %}?weeks=' + weeks;
+        }
+    </script>
+    </div>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+    {% load static %}
+    <link rel="stylesheet" href="/static/planner/style.css">
+    <style>body{margin:0;min-height:100vh;background:#e8eef3;font-family:Arial,sans-serif}.page-container{background:rgba(255,255,255,0.86);max-width:900px;margin:40px auto;padding:24px 28px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.2);text-align:center}.brand{display:flex;align-items:center}.brand img{height:40px;border-radius:8px;margin-right:10px}.brand-title{font-weight:bold;font-size:18px}h2{margin-top:0}button{padding:10px 16px;border-radius:8px;border:none;background:#0d6efd;color:white;cursor:pointer}button:hover{background:#0b5ed7}</style>
+</head>
+<body>
+    <div class="page-container">
+    <div class="brand-row">
+        <div class="brand">
+            <img src="/static/planner/plannerly.svg" alt="Plannerly logo">
+            <span class="brand-title">Daily Planner</span>
+        </div>
+        <div class="no-print" style="text-align:right;">
+            <a href="{% url 'welcome' %}">Home</a>
+        </div>
+    </div>
+    <h2>Login</h2>
+    <form method="post">
+        {% csrf_token %}
+        <label for="username">Username:</label>
+        <input type="text" name="username" id="username">
+        <br>
+        <br>
+        <label for="password">Password:</label>
+        <input type="password" name="password" id="password">
+        <br>
+        <br>
+        <br>
+        <button type="submit">Login</button>
+    </form>
+    {% if error_message %}
+        <p style="color: red;">{{ error_message }}</p>
+    {% endif %}
+    <p>Don't have an account? <a href="{% url 'register' %}">Register here</a></p>
+    </div>
+</body>
+</html>

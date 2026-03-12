@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Welcome</title>
+    {% load static %}
+    <link rel="stylesheet" href="/static/planner/style.css">
+    <style>body{margin:0;min-height:100vh;background:#e8eef3;font-family:Arial,sans-serif}.page-container{background:rgba(255,255,255,0.86);max-width:900px;margin:40px auto;padding:24px 28px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.2);text-align:center}.brand{display:flex;align-items:center}.brand img{height:40px;border-radius:8px;margin-right:10px}.brand-title{font-weight:bold;font-size:18px}h2{margin-top:0}button{padding:10px 16px;border-radius:8px;border:none;background:#0d6efd;color:white;cursor:pointer}a{margin-left:8px}</style>
+</head>
+<body>
+    <div class="page-container">
+    <div class="brand-row">
+        <div class="brand">
+            <img src="/static/planner/plannerly.svg" alt="Plannerly logo">
+            <span class="brand-title">Daily Planner</span>
+        </div>
+        <div class="no-print" style="text-align:right;">
+            <button onclick="openInfo()">Click here for more info</button>
+            <a href="{% url 'logout' %}" onclick="saveProgress()" style="margin-left:8px;">Logout</a>
+        </div>
+    </div>
+    <h2>Welcome, {{ request.user.username }}</h2>
+    <p>This is a daily planner application. You can set your preferences, select activities, and generate your timetable.</p>
+    <a href="{% url 'preferences' %}">Proceed</a>
+    </div>
+    <div id="infoOverlay" class="modal-overlay" onclick="closeInfo(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <button class="close-btn" onclick="closeInfo()">×</button>
+            <h3>About Daily Planner</h3>
+            <p>Plan your study and activities efficiently. Set your weekly class hours, choose activities, and auto-generate a timetable you can print or sync to your calendar.</p>
+            <h4>How to use</h4>
+            <ol>
+                <li>Set your weekly class times on the Preferences page.</li>
+                <li>Select up to 10 activities on the Activities page.</li>
+                <li>On the Timetable, click Fill Activities to distribute them, edit cells as needed, and save or export.</li>
+            </ol>
+            <h4>Tips</h4>
+            <ul>
+                <li>Use Grey Edit to note class details directly in grey cells.</li>
+                <li>Save as PDF for printing, or Sync to Google to export ICS.</li>
+            </ul>
+        </div>
+    </div>
+    <script>
+    function saveProgress() {
+    }
+    function openInfo(){ document.getElementById('infoOverlay').style.display='flex'; }
+    function closeInfo(){ document.getElementById('infoOverlay').style.display='none'; }
+    </script>
+</body>
+</html>
